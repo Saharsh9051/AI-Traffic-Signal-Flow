@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignalFlow - AI-Powered Smart Traffic Signals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hero-bg { background: linear-gradient(135deg, rgba(30, 64, 175, 0.95), rgba(59, 130, 246, 0.9)), url('https://placehold.co/1920x1080/0a122a/e0e7ff?text=City+Nightscape'); background-size: cover; background-position: center; }
+        .car { transition: all 0.05s linear; position: absolute; }
+        .active-scenario { background-color: #1d4ed8; color: white; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
+            justify-content: center; z-index: 1000; opacity: 0;
+            pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: white; padding: 2rem; border-radius: 0.5rem;
+            text-align: center; transform: scale(0.9); transition: transform 0.3s ease;
+        }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+
+        .traffic-light {
+            position: absolute; background-color: #1a202c; padding: 5px;
+            border-radius: 8px; display: flex; gap: 4px;
+            border: 2px solid #4a5568; z-index: 10;
+        }
+        .traffic-light.vertical { flex-direction: column; }
+        .traffic-light.horizontal { flex-direction: row; }
+        .light-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background-color: #4a5568; /* Off color */
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .light-red-on { background-color: #ff0000; box-shadow: 0 0 8px 2px #ef4444; }
+        .light-green-on { background-color: #22c55e; box-shadow: 0 0 8px 2px #22c55e; }
+        
+        .windshield {
+            width: 80%;
+            height: 35%;
+            background: #a7f3d0;
+            margin: 5% auto 0;
+            border-radius: 4px 4px 2px 2px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <header class="bg-white/80 backdrop-blur-lg fixed top-0 left-0 right-0 z-50 shadow-sm">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#home" class="flex items-center space-x-2">
+                <i data-lucide="traffic-cone" class="h-8 w-8 text-blue-600"></i>
+                <span class="text-2xl font-bold text-gray-800">SignalFlow</span>
+            </a>
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="#simulation" class="text-gray-600 hover:text-blue-600 transition">Live Demo</a>
+                <a href="#how-it-works" class="text-gray-600 hover:text-blue-600 transition">How It Works</a>
+            </nav>
+        </div>
+    </header>
+
+    <section id="home" class="hero-bg text-white pt-32 pb-20">
+        <div class="container mx-auto px-6 text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">Re-imagining Urban Commute. <br> One Signal at a Time.</h1>
+            <p class="mt-6 text-lg text-blue-100 max-w-2xl mx-auto">
+                SignalFlow uses cutting-edge AI to analyze live traffic, dynamically adjusting signals to reduce congestion, minimize pollution, and create smarter cities.
+            </p>
+            <a href="#simulation" class="mt-8 inline-block bg-white text-blue-600 font-bold text-lg px-8 py-4 rounded-full shadow-2xl transform hover:scale-105 transition-transform">
+                See it in Action
+            </a>
+        </div>
+    </section>
+
+    <section id="simulation" class="py-20 bg-gray-100">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800">Don't Just Read. Experience It.</h2>
+                <p class="text-gray-600 mt-2">Select a traffic scenario and mode below to see how our smart signals adapt in real-time.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-8 items-center">
+                <div class="md:col-span-1">
+                    <h3 class="text-xl font-bold mb-2">1. Select Scenario:</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-1 gap-2 mb-4">
+                        <button class="scenario-btn p-2 border rounded-lg text-sm" data-scenario="1">1-Way Heavy</button>
+                        <button class="scenario-btn p-2 border rounded-lg text-sm" data-scenario="2">2-Way Normal</button>
+                        <button class="scenario-btn p-2 border rounded-lg text-sm" data-scenario="3">3-Way Mixed</button>
+                        <button class="scenario-btn p-2 border rounded-lg text-sm active-scenario" data-scenario="4">4-Way Rush Hour</button>
+                    </div>
+
+                    <h3 class="text-xl font-bold mb-2">2. Choose Mode:</h3>
+                    <div class="space-y-2">
+                        <button id="traditional-btn" class="w-full bg-red-500 text-white font-semibold py-3 px-4 rounded-lg shadow hover:bg-red-600 transition">Run Traditional</button>
+                        <button id="smart-btn" class="w-full bg-green-500 text-white font-semibold py-3 px-4 rounded-lg shadow hover:bg-green-600 transition">Run Smart AI</button>
+                    </div>
+                    <div class="mt-4 p-4 bg-white rounded-lg border">
+                        <h4 class="font-semibold">Current Status:</h4>
+                        <p id="status-text" class="text-lg font-bold text-blue-600 mt-1">Select a mode</p>
+                        <p class="text-sm text-gray-500">Cars Waiting: <span id="waiting-count" class="font-bold">0</span></p>
+                    </div>
+                </div>
+                <div class="md:col-span-4 bg-gray-800 p-2 rounded-xl shadow-inner relative aspect-video">
+                    <div id="sim-canvas" class="w-full h-full relative overflow-hidden bg-gray-700 rounded-lg">
+                        <!-- Roads -->
+                        <div class="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-24 bg-gray-600"></div>
+                        <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-24 bg-gray-600"></div>
+                        <!-- Dashed Lines -->
+                        <div class="absolute w-1 h-full left-1/2 -translate-x-1/2 flex flex-col justify-between" style="top: 0; bottom: 0;">
+                           <div class="h-2/5 border-l-4 border-dashed border-gray-400"></div>
+                           <div class="h-2/5 border-l-4 border-dashed border-gray-400"></div>
+                        </div>
+                         <div class="absolute h-1 w-full top-1/2 -translate-y-1/2 flex justify-between" style="left: 0; right: 0;">
+                           <div class="w-2/5 border-t-4 border-dashed border-gray-400"></div>
+                           <div class="w-2/5 border-t-4 border-dashed border-gray-400"></div>
+                        </div>
+                        
+                        <!-- Traffic Lights -->
+                        <div id="light-down" class="traffic-light vertical" style="top: calc(50% - 6.5rem - 42px); left: calc(50% + 6.5rem);">
+                            <span class="light-dot"></span><span class="light-dot"></span>
+                        </div>
+                        <div id="light-up" class="traffic-light vertical" style="bottom: calc(50% - 6.5rem - 42px); left: calc(50% - 6.5rem - 22px);">
+                            <span class="light-dot"></span><span class="light-dot"></span>
+                        </div>
+                        <div id="light-right" class="traffic-light horizontal" style="top: calc(50% - 6.5rem - 22px); left: calc(50% - 6.5rem - 42px);">
+                            <span class="light-dot"></span><span class="light-dot"></span>
+                        </div>
+                        <div id="light-left" class="traffic-light horizontal" style="top: calc(50% + 6.5rem); right: calc(50% - 6.5rem - 42px);">
+                             <span class="light-dot"></span><span class="light-dot"></span>
+                        </div>
+
+                        <!-- Car container -->
+                        <div id="cars-container" class="w-full h-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="py-20 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800">How SignalFlow Works</h2>
+                <p class="text-gray-600 mt-2">Understanding the technology behind the simulation.</p>
+            </div>
+            <div class="max-w-4xl mx-auto">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Traditional Mode Card -->
+                    <div class="bg-gray-50 p-6 rounded-lg border">
+                        <div class="flex items-center mb-4">
+                            <i data-lucide="timer" class="h-10 w-10 text-red-500"></i>
+                            <h3 class="ml-4 text-2xl font-bold text-gray-800">Traditional Mode</h3>
+                        </div>
+                        <p class="text-gray-600">
+                            In this mode, the traffic light operates on a **fixed-time cycle**. It does not consider real-time traffic data.
+                        </p>
+                        <ul class="mt-4 space-y-2 text-gray-700 list-disc list-inside">
+                            <li>The light changes every 12.5 seconds.</li>
+                            <li>The timing remains fixed, regardless of traffic volume.</li>
+                            <li>This often leads to unnecessary congestion on one side.</li>
+                        </ul>
+                    </div>
+                    <!-- Smart AI Mode Card -->
+                    <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                        <div class="flex items-center mb-4">
+                            <i data-lucide="cpu" class="h-10 w-10 text-green-500"></i>
+                            <h3 class="ml-4 text-2xl font-bold text-gray-800">Smart AI Mode</h3>
+                        </div>
+                        <p class="text-gray-600">
+                           This mode uses a **Dynamic Rule-Based Heuristic Algorithm** that makes decisions based on live traffic.
+                        </p>
+                        <ul class="mt-4 space-y-2 text-gray-700 list-disc list-inside">
+                            <li>**Data Collection:** The system counts waiting vehicles in each direction.</li>
+                            <li>**Decision Making:** If one direction has significantly more cars, its light turns green.</li>
+                            <li>**Efficiency:** It changes lights based on actual need, improving traffic flow.</li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- Project Benefits -->
+                <div class="mt-12">
+                     <h3 class="text-2xl font-bold text-center text-gray-800 mb-6">Project Benefits & Future Scope</h3>
+                     <div class="grid md:grid-cols-2 gap-8">
+                         <div>
+                            <h4 class="text-xl font-semibold text-blue-600 mb-2">Key Benefits</h4>
+                            <ul class="space-y-2">
+                                <li class="flex items-start"><i data-lucide="check-circle-2" class="h-5 w-5 text-green-500 mr-2 mt-1 shrink-0"></i><span>Reduces traffic congestion and waiting times.</span></li>
+                                <li class="flex items-start"><i data-lucide="check-circle-2" class="h-5 w-5 text-green-500 mr-2 mt-1 shrink-0"></i><span>Saves fuel and reduces air pollution from idling vehicles.</span></li>
+                                <li class="flex items-start"><i data-lucide="check-circle-2" class="h-5 w-5 text-green-500 mr-2 mt-1 shrink-0"></i><span>Improves overall city commute efficiency.</span></li>
+                            </ul>
+                         </div>
+                         <div>
+                            <h4 class="text-xl font-semibold text-blue-600 mb-2">Future Improvements</h4>
+                             <ul class="space-y-2">
+                                <li class="flex items-start"><i data-lucide="rocket" class="h-5 w-5 text-purple-500 mr-2 mt-1 shrink-0"></i><span>Integrate real Machine Learning models for traffic prediction.</span></li>
+                                <li class="flex items-start"><i data-lucide="rocket" class="h-5 w-5 text-purple-500 mr-2 mt-1 shrink-0"></i><span>Use live camera feeds for vehicle and pedestrian detection.</span></li>
+                                <li class="flex items-start"><i data-lucide="rocket" class="h-5 w-5 text-purple-500 mr-2 mt-1 shrink-0"></i><span>Create an emergency corridor for ambulances and fire trucks.</span></li>
+                            </ul>
+                         </div>
+                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="modal-overlay">
+        <div class="modal-content">
+            <p id="alert-message" class="mb-4"></p>
+            <button id="alert-ok-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">OK</button>
+        </div>
+    </div>
+
+<script>
+    lucide.createIcons();
+
+    const traditionalBtn = document.getElementById('traditional-btn');
+    const smartBtn = document.getElementById('smart-btn');
+    const scenarioBtns = document.querySelectorAll('.scenario-btn');
+    const statusText = document.getElementById('status-text');
+    const waitingCount = document.getElementById('waiting-count');
+    const carsContainer = document.getElementById('cars-container');
+    const simCanvas = document.getElementById('sim-canvas');
+    const alertModal = document.getElementById('alert-modal');
+    const alertMessage = document.getElementById('alert-message');
+    const alertOkBtn = document.getElementById('alert-ok-btn');
+
+    const lightUp = document.getElementById('light-up');
+    const lightDown = document.getElementById('light-down');
+    const lightLeft = document.getElementById('light-left');
+    const lightRight = document.getElementById('light-right');
+
+    let simulationInterval = null;
+    let currentScenario = '4';
+    let cars = [];
+    const carSize = { w: 16, h: 32 }; 
+    const intersectionCenter = { x: 50, y: 50 };
+    let stopLines = {};
+
+    function customAlert(message) {
+        alertMessage.textContent = message;
+        alertModal.classList.add('visible');
+    }
+    alertOkBtn.addEventListener('click', () => alertModal.classList.remove('visible'));
+
+    function getStopLines() {
+        const canvasHeight = simCanvas.offsetHeight;
+        const intersectionSizePercent = 13;
+        const carHeightPercent = (carSize.h / canvasHeight) * 100;
+        return {
+            up: intersectionCenter.y + intersectionSizePercent,
+            down: intersectionCenter.y - intersectionSizePercent - carHeightPercent,
+            left: intersectionCenter.x + intersectionSizePercent,
+            right: intersectionCenter.x - intersectionSizePercent - carHeightPercent, 
+        };
+    }
+
+    window.addEventListener('resize', () => {
+        if (simulationInterval) stopLines = getStopLines();
+    });
+
+    scenarioBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            scenarioBtns.forEach(b => b.classList.remove('active-scenario'));
+            btn.classList.add('active-scenario');
+            currentScenario = btn.dataset.scenario;
+            resetSimulation();
+        });
+    });
+
+    traditionalBtn.addEventListener('click', () => {
+        if (!currentScenario) { customAlert("Please select a scenario first."); return; }
+        runSimulation('traditional');
+    });
+
+    smartBtn.addEventListener('click', () => {
+         if (!currentScenario) { customAlert("Please select a scenario first."); return; }
+        runSimulation('smart');
+    });
+    
+    function setLightState(lightElement, state) {
+        const dots = lightElement.querySelectorAll('.light-dot');
+        const redDot = dots[0];
+        const greenDot = dots[1];
+        
+        redDot.classList.remove('light-red-on');
+        greenDot.classList.remove('light-green-on');
+
+        if (state === 'red') {
+            redDot.classList.add('light-red-on');
+        } else if (state === 'green') {
+            greenDot.classList.add('light-green-on');
+        }
+    }
+
+    function updateAllLights(verticalIsGreen) {
+        if (verticalIsGreen) {
+            setLightState(lightUp, 'green');
+            setLightState(lightDown, 'green');
+            setLightState(lightLeft, 'red');
+            setLightState(lightRight, 'red');
+        } else {
+            setLightState(lightUp, 'red');
+            setLightState(lightDown, 'red');
+            setLightState(lightLeft, 'green');
+            setLightState(lightRight, 'green');
+        }
+    }
+
+    function resetSimulation() {
+        clearInterval(simulationInterval);
+        simulationInterval = null;
+        carsContainer.innerHTML = '';
+        cars = [];
+        waitingCount.textContent = '0';
+        statusText.textContent = 'Select a mode';
+        setLightState(lightUp, 'off');
+        setLightState(lightDown, 'off');
+        setLightState(lightLeft, 'off');
+        setLightState(lightRight, 'off');
+    }
+
+    function createCar(direction) {
+        const carEl = document.createElement('div');
+        carEl.className = 'car rounded-sm';
+        
+        const windshield = document.createElement('div');
+        windshield.className = 'windshield';
+        carEl.appendChild(windshield);
+        
+        let x, y, w, h;
+        const colors = ['#60a5fa', '#f87171', '#4ade80', '#fbbf24', '#a78bfa', '#f472b6'];
+        carEl.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        carEl.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
+
+        switch(direction) {
+            case 'up': x = intersectionCenter.x - 8; y = 110; w = carSize.w; h = carSize.h; break;
+            case 'down': x = intersectionCenter.x + 2; y = -20; w = carSize.w; h = carSize.h; carEl.style.transform = 'rotate(180deg)'; break;
+            case 'left': x = 110; y = intersectionCenter.y + 2.5; w = carSize.h; h = carSize.w; carEl.style.transform = 'rotate(-90deg)'; break;
+            case 'right': x = -20; y = intersectionCenter.y - 7.5; w = carSize.h; h = carSize.w; carEl.style.transform = 'rotate(90deg)'; break;
+        }
+        carEl.style.width = `${w}px`;
+        carEl.style.height = `${h}px`;
+        carEl.style.left = `${x}%`;
+        carEl.style.top = `${y}%`;
+
+        const carObj = { el: carEl, direction, x, y, stopped: false };
+        cars.push(carObj);
+        carsContainer.appendChild(carEl);
+    }
+    
+    function runSimulation(simMode) {
+        resetSimulation();
+        stopLines = getStopLines(); 
+        statusText.textContent = `Running ${simMode}...`;
+        
+        let timer = 0;
+        let verticalIsGreen = true;
+        updateAllLights(verticalIsGreen);
+        
+        simulationInterval = setInterval(() => {
+            timer++;
+            
+            const spawnRates = {
+                '1': { directions: ['down'], rate: 40 },
+                '2': { directions: ['down', 'up'], rate: 80 },
+                '3': { directions: ['down', 'up', 'left'], rate: 60 },
+                '4': { directions: ['down', 'up', 'left', 'right'], rate: 50 }
+            };
+            const scenarioConfig = spawnRates[currentScenario];
+            if (timer % scenarioConfig.rate === 0) {
+                 createCar(scenarioConfig.directions[Math.floor(Math.random() * scenarioConfig.directions.length)]);
+            }
+
+            if (simMode === 'traditional') {
+                if (timer % 250 === 0) {
+                    verticalIsGreen = !verticalIsGreen;
+                    updateAllLights(verticalIsGreen);
+                }
+            } else if (simMode === 'smart') {
+               if (timer % 100 === 0) {
+                    const waitingV = cars.filter(c => c.stopped && (c.direction === 'up' || c.direction === 'down')).length;
+                    const waitingH = cars.filter(c => c.stopped && (c.direction === 'left' || c.direction === 'right')).length;
+                    
+                    if (waitingH > waitingV + 2) {
+                         verticalIsGreen = false;
+                    } else if (waitingV > waitingH + 2) {
+                        verticalIsGreen = true;
+                    }
+                    updateAllLights(verticalIsGreen);
+               }
+            }
+            gameLoop(verticalIsGreen);
+        }, 50);
+    }
+    
+    function gameLoop(verticalIsGreen) {
+        cars.forEach((car, index) => {
+            let isVertical = car.direction === 'up' || car.direction === 'down';
+            let isRedLight = (isVertical && !verticalIsGreen) || (!isVertical && verticalIsGreen);
+            
+            let stopPosition;
+            if (car.direction === 'up') stopPosition = stopLines.up;
+            else if (car.direction === 'down') stopPosition = stopLines.down;
+            else if (car.direction === 'left') stopPosition = stopLines.left;
+            else if (car.direction === 'right') stopPosition = stopLines.right;
+
+            let checkRange = 5;
+            let isAtLight = false;
+            if (car.direction === 'up') isAtLight = car.y < stopPosition && car.y > stopPosition - checkRange;
+            else if (car.direction === 'down') isAtLight = car.y > stopPosition && car.y < stopPosition + checkRange;
+            else if (car.direction === 'left') isAtLight = car.x < stopPosition && car.x > stopPosition - checkRange;
+            else if (car.direction === 'right') isAtLight = car.x > stopPosition && car.x < stopPosition + checkRange;
+
+            let carInFront = false;
+            for(let otherCar of cars) {
+                if (car === otherCar || car.direction !== otherCar.direction) continue;
+                
+                let dist = isVertical ? Math.abs(car.y - otherCar.y) : Math.abs(car.x - otherCar.x);
+                let isAhead = false;
+                if (car.direction === 'up' && car.y > otherCar.y) isAhead = true;
+                else if (car.direction === 'down' && car.y < otherCar.y) isAhead = true;
+                else if (car.direction === 'left' && car.x > otherCar.x) isAhead = true;
+                else if (car.direction === 'right' && car.x < otherCar.x) isAhead = true;
+
+                if (isAhead && dist < (isVertical ? 5 : 6)) {
+                    carInFront = true;
+                    break;
+                }
+            }
+
+            car.stopped = (isRedLight && isAtLight) || (car.stopped && isRedLight && isAtLight) || carInFront;
+
+            if (!car.stopped) {
+                let speed = 0.8;
+                switch(car.direction) {
+                    case 'up': car.y -= speed; break;
+                    case 'down': car.y += speed; break;
+                    case 'left': car.x -= speed; break;
+                    case 'right': car.x += speed; break;
+                }
+            }
+
+            if (car.y < -25 || car.y > 115 || car.x < -25 || car.x > 115) {
+                car.el.remove();
+                cars.splice(index, 1);
+            } else {
+                car.el.style.top = `${car.y}%`;
+                car.el.style.left = `${car.x}%`;
+            }
+        });
+        
+        waitingCount.textContent = cars.filter(c => c.stopped).length;
+    }
+</script>
+
+</body>
+</html>
